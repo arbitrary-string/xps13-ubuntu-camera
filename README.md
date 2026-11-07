@@ -62,4 +62,5 @@ Run [`scripts/check-cameras.sh`](scripts/check-cameras.sh) at any point; it chan
 - `ipu6-isys-pmguard` / `ipu-bridge-noir`: patches to Linux kernel files (GPL-2.0).
 - Gaze: **Gundu Labs**, GPL-3.0-or-later; our patches in `patches/gaze/` are under the same licence.
 - v4l2-relayd: **Canonical Ltd.**, GPL-2.0; our patch in `patches/v4l2-relayd/` likewise.
-- Each directory keeps its upstream licence. See [LICENSE](LICENSE) for the files written for this repo.
+- Files written for this repo (docs, configs, scripts) are **GPL-2.0-or-later** ([LICENSE](LICENSE) has the GPL-2 text).
+  Each directory keeps its upstream licence — see [NOTICE](NOTICE) for the per-directory list.

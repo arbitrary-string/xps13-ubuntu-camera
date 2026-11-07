@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-2.0-or-later
 # Read-only health check for the Dell XPS 13 9340 (IPU6) / 9350 (IPU7) camera stack on Ubuntu.
 # Changes nothing. Some checks need sudo (debugfs, initramfs listing); you may be asked for a password.
 set -u

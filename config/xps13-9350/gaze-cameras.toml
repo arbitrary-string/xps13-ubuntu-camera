@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
 # Excerpt for /etc/gaze/config.toml [cameras] on the Dell XPS 13 9350 (IPU7).
 # Requires the patched gazed (patches/gaze). These are the values the Gaze GUI writes when you
 # pick "Front Camera" / "IR Camera"; the patched daemon opens them through its own libcamera.

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-2.0-or-later
 # Stage a DKMS source tree for one of the kernel-derived IPU6 fixes (Dell XPS 13 9340 only):
 #   ipu6-isys-pmguard  - NULL-drvdata guard in the IPU6 ISYS runtime-PM suspend (boot-time crash fix)
 #   ipu-bridge-noir    - drop HIMX1092 from ipu-bridge (RGB-only fallback when no HM1092 driver is used)

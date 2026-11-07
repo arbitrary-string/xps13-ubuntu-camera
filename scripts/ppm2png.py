@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
 import sys, zlib, struct
 d=open(sys.argv[1],'rb').read()
 p=d.split(b'\n',3); w,h=map(int,p[1].split()); px=p[3]

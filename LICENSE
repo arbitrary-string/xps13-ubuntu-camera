@@ -1,16 +1,3 @@
-Files written for this repository (documentation, configuration files and scripts) are
-licensed under the GNU General Public License, version 2 or (at your option) any later
-version (SPDX: GPL-2.0-or-later). The full text of version 2 follows below.
-
-Third-party code and patches keep their upstream licences:
-  dkms/hm1092-dell/            GPL-2.0-only  (HM1092 driver by Jake Steinman, plus our patches)
-  dkms/ipu6-isys-pmguard/      GPL-2.0       (patch to the Linux kernel)
-  dkms/ipu-bridge-noir/        GPL-2.0       (patch to the Linux kernel)
-  patches/v4l2-relayd/         GPL-2.0       (patch to v4l2-relayd, (C) Canonical Ltd.)
-  patches/gaze/                GPL-3.0-or-later (patches to Gaze, (C) Gundu Labs)
-
---------------------------------------------------------------------------------------
-
                     GNU GENERAL PUBLIC LICENSE
                        Version 2, June 1991
 

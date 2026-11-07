@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-2.0-or-later
 # Pre-grant the xdg-desktop-portal camera permission to Google Chrome (.deb build).
 #
 # Why: with chrome://flags "PipeWire Camera support" enabled, Chrome asks the camera portal for

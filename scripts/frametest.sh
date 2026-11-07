@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-2.0-or-later
 # usage: frametest.sh <libcamera camera name> ; prints exit code and seconds for 30 frames
 s=$(date +%s%N)
 timeout 15 gst-launch-1.0 -q libcamerasrc camera-name="$1" ! 'video/x-raw,pixel-aspect-ratio=1/1' ! identity eos-after=30 ! videoconvert ! videoscale ! 'video/x-raw,format=BGR' ! fakesink 2>&1 | grep -iE "error|erroneous|no element|could not" | head -3
