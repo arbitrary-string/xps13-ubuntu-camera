@@ -11,10 +11,10 @@ Windows-Hello-style IR camera — working on Ubuntu, for:
 Tested on **Ubuntu 26.10** with kernel **7.3.0-10-generic**, libcamera 0.7.0, PipeWire/WirePlumber 0.5,
 Gaze 0.4.2. Other kernels and releases may need adjustments — see [docs/troubleshooting.md](docs/troubleshooting.md).
 
-> **Status: personal hardware-enablement work, not an official package.** Everything here was
+> **Status: personal hardware-enablement work, not an official Ubuntu package.** Everything here was
 > developed and verified on one machine of each model. It touches kernel modules, the boot image and
 > system services. Read what each step does before running it, keep your password login working,
-> and know how to boot an older kernel from GRUB. An installer/package is planned.
+> and know how to boot an older kernel from GRUB.
 
 ## Why the webcam doesn't work out of the box
 
@@ -42,9 +42,41 @@ Adding an HM1092 driver fixes both cameras at once. After that, a handful of use
 | [`patches/gaze/`](patches/gaze/) | [Gaze](https://github.com/GunduLabs/gaze) face authentication: use libcamera cameras (RGB + IR) | both |
 | [`patches/v4l2-relayd/`](patches/v4l2-relayd/), [`config/xps13-9350/v4l2-relayd/`](config/xps13-9350/v4l2-relayd/) | "Virtual Camera" for V4L2-only apps such as **Zoom** | 9350 (9340 untested) |
 | [`scripts/`](scripts/) | `check-cameras.sh` (read-only health check), Chrome camera permission fix, test helpers | both |
+| [`debian/`](debian/), [`packaging/`](packaging/), [`third_party/`](third_party/) | Debian packaging (`xps13-ubuntu-camera`, `xps13-ubuntu-camera-zoom`), model detection, packaged configs, vendored v4l2-relayd source | both |
 | [`docs/`](docs/) | Per-model walkthroughs, how it works, troubleshooting | — |
 
-## Installation order (manual, for now)
+## Install (Debian package — recommended)
+
+Build the packages from this repository and install them (Ubuntu 26.10, kernel 7.3):
+
+```bash
+sudo apt install build-essential debhelper dh-dkms pkgconf libglib2.0-dev \
+  libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+git clone https://github.com/arbitrary-string/xps13-ubuntu-camera.git
+cd xps13-ubuntu-camera && dpkg-buildpackage -us -uc -b
+sudo apt install ../xps13-ubuntu-camera_*_all.deb          # cameras (both models)
+sudo apt install ../xps13-ubuntu-camera-zoom_*_amd64.deb   # optional: Virtual Camera for Zoom etc.
+sudo reboot
+```
+
+| Package | What it does |
+|---|---|
+| `xps13-ubuntu-camera` | HM1092 IR driver (DKMS, rebuilt for new kernels), keeps the camera drivers out of the initramfs, system-wide WirePlumber rules for both models, login wait for the camera. `xps13-camera-setup` detects the model and, on the **9340 (IPU6)**, builds the boot-crash fix (needs `sudo apt install linux-source-$(uname -r \| cut -d- -f1)` first, then `sudo xps13-camera-setup --configure`). |
+| `xps13-ubuntu-camera-zoom` | Patched v4l2-relayd: a "Virtual Camera" for V4L2-only apps (Zoom snap, Cheese, VLC). The real camera only runs while an app uses it. |
+
+After rebooting: `xps13-camera-check` (read-only health check). For Chrome/Google Meet run
+`xps13-camera-chrome-fix` once as your user and enable `chrome://flags/#enable-webrtc-pipewire-camera`.
+Gaze face unlock is not packaged — see [patches/gaze/README.md](patches/gaze/README.md).
+
+The packages take over a previous manual installation (same DKMS module versions, the relay
+divert and config). Remove them with `sudo apt remove xps13-ubuntu-camera-zoom xps13-ubuntu-camera`
+(the webcam stops working again without the HM1092 driver).
+
+Tested: XPS 13 9350 — clean install, upgrade and reboots; sound, GNOME Camera, Chrome/Meet, Zoom
+and Gaze (RGB + IR) verified. XPS 13 9340: the same components were verified there by hand; the
+package's IPU6 path is untested on hardware.
+
+## Manual installation
 
 Per-model step-by-step guides: **[docs/xps13-9340.md](docs/xps13-9340.md)** · **[docs/xps13-9350.md](docs/xps13-9350.md)**
 
