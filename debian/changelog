@@ -1,3 +1,14 @@
+xps13-ubuntu-camera (0.2.1) stonking; urgency=medium
+
+  * Virtual Camera: drop videorate from the relay's input pipeline. It
+    selects frames by timestamp and libcamerasrc timestamps drift from the
+    relay's clock: on the XPS 13 9340 (IPU6) almost no frames got through
+    (camera LED on, no picture); on the 9350 it degraded to ~40/90 frames
+    after about 5 minutes. libcamera already delivers the requested 30 fps.
+  * collect-diagnostics.sh: test the relay's actual input pipeline.
+
+ -- arbitrary-string <arbitrarystring@gmail.com>  Sat, 07 Nov 2026 18:00:00 -0500
+
 xps13-ubuntu-camera (0.2.0) stonking; urgency=medium
 
   * Merge xps13-ubuntu-camera-zoom into xps13-ubuntu-camera: one package

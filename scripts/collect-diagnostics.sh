@@ -56,7 +56,7 @@ say "TEST 3: the relay's input pipeline on its own, clock-synced sink (30 frames
 esc=$(printf '%s' "$rgb" | sed 's/\\/\\\\/g')
 for sync in false true; do
 	s=$(date +%s%N)
-	timeout 15 gst-launch-1.0 -q libcamerasrc camera-name="$esc" ! videoconvert ! videoscale ! videorate \
+	timeout 15 gst-launch-1.0 -q libcamerasrc camera-name="$esc" ! videoconvert ! videoscale \
 		! 'video/x-raw,format=YUY2,width=1280,height=720,framerate=30/1' ! identity eos-after=30 ! fakesink sync=$sync >/dev/null 2>&1
 	echo "sink sync=$sync: exit=$? (0 = 30 frames, 124 = stalled) in $(( ($(date +%s%N)-s)/1000000 )) ms"
 	sleep 2

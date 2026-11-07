@@ -109,6 +109,10 @@ camera only while an app has the virtual one open. Stock v4l2-relayd 0.2.0 did n
 5. even then it stalls after ~16 frames: the relay gives its input pipeline the output pipeline's
    base time, sources stamp buffers on their own timeline, and `v4l2sink` drops every frame as late.
    → `patches/v4l2-relayd/` disables appsink clock sync and re-stamps buffers on hand-over.
+6. **No `videorate` in the input pipeline.** It decides which frames to pass purely from timestamps;
+   `libcamerasrc` timestamps drift away from the relay's clock, so with `videorate` the relay delivered
+   full frame rate for ~5 minutes on the 9350 and then ~40/90 frames, and on the 9340 (IPU6) almost
+   none from the start. libcamera already delivers the 30 fps the relay asks for.
 
 ## Problem 7 — Gaze face authentication can't use these cameras
 
