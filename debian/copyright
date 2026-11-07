@@ -1,0 +1,45 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: xps13-ubuntu-camera
+Source: https://github.com/arbitrary-string/xps13-ubuntu-camera
+
+Files: *
+Copyright: 2026 arbitrary-string <arbitrarystring@gmail.com>
+License: GPL-2+
+
+Files: dkms/hm1092-dell/*
+Copyright: 2026 Jake Steinman
+           2026 arbitrary-string <arbitrarystring@gmail.com>
+License: GPL-2
+
+Files: dkms/ipu6-isys-pmguard/* dkms/ipu-bridge-noir/* packaging/ipu6-pmguard/*
+Copyright: 2026 arbitrary-string <arbitrarystring@gmail.com>
+Comment: Patches to and build helpers for files of the Linux kernel (GPL-2.0).
+License: GPL-2
+
+Files: third_party/v4l2-relayd/* patches/v4l2-relayd/*
+Copyright: 2020 Canonical Ltd.
+           2026 arbitrary-string <arbitrarystring@gmail.com>
+License: GPL-2
+
+Files: patches/gaze/*
+Copyright: 2026 Gundu Labs
+           2026 arbitrary-string <arbitrarystring@gmail.com>
+License: GPL-3+
+Comment: Not part of any binary package; documentation only.
+
+License: GPL-2
+ On Debian systems, the full text of the GNU General Public License version 2
+ can be found in /usr/share/common-licenses/GPL-2.
+
+License: GPL-2+
+ This program is free software; you can redistribute it and/or modify it under
+ the terms of the GNU General Public License as published by the Free Software
+ Foundation; either version 2 of the License, or (at your option) any later
+ version.
+ .
+ On Debian systems, the full text of the GNU General Public License version 2
+ can be found in /usr/share/common-licenses/GPL-2.
+
+License: GPL-3+
+ On Debian systems, the full text of the GNU General Public License version 3
+ can be found in /usr/share/common-licenses/GPL-3.

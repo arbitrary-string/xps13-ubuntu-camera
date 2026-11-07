@@ -1,0 +1,27 @@
+.\" SPDX-License-Identifier: GPL-2.0-or-later
+.TH XPS13-CAMERA-SETUP 8 "November 2026" "xps13-ubuntu-camera 0.1.0"
+.SH NAME
+xps13-camera-setup \- detect Dell XPS 13 camera hardware and apply model-specific fixes
+.SH SYNOPSIS
+.B xps13-camera-setup
+.RB [ \-\-status | \-\-camera\-id | \-\-configure | \-\-unconfigure ]
+.SH DESCRIPTION
+Detects the laptop model (DMI), the Intel camera unit (IPU6 or IPU7, by PCI ID) and the
+OV02C10 / HM1092 sensors (ACPI), and reports or applies the parts of
+.B xps13-ubuntu-camera
+that depend on them. Without options it prints what was detected and installed.
+.TP
+.B \-\-camera\-id
+Print the RGB webcam's libcamera camera ID (its ACPI path, e.g. \e_SB_.LNK1).
+.TP
+.B \-\-configure
+(root) On IPU6 machines (XPS 13 9340), build the IPU6 boot-crash fix with DKMS if the
+matching linux-source package is installed; otherwise say how to install it. Run by the
+package's postinst; run it again after installing linux-source.
+.TP
+.B \-\-unconfigure
+(root) Remove what \-\-configure added.
+.SH SEE ALSO
+.BR xps13-camera-check (1),
+.BR dkms (8),
+/usr/share/doc/xps13-ubuntu-camera/

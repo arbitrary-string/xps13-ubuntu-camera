@@ -1,0 +1,20 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+set -e
+
+#DEBHELPER#
+
+if [ "$1" = configure ]; then
+	xps13-camera-setup --configure || true
+	# Rebuild the initramfs so the camera drivers are kept out of it (see 90-xps13-camera.conf).
+	if command -v update-initramfs >/dev/null 2>&1; then
+		update-initramfs -u -k all || true
+	fi
+	if [ -e /etc/dracut.conf.d/90-camera-not-in-initramfs.conf ]; then
+		echo "xps13-ubuntu-camera: note: /etc/dracut.conf.d/90-camera-not-in-initramfs.conf (manual install) is now redundant and can be removed."
+	fi
+	if ls /home/*/.config/wireplumber/wireplumber.conf.d/5[012]-*camera*.conf /home/*/.config/wireplumber/wireplumber.conf.d/50-hide-ipu*-raw.conf >/dev/null 2>&1; then
+		echo "xps13-ubuntu-camera: note: per-user WirePlumber camera files from a manual install are now redundant (harmless)."
+	fi
+fi
+exit 0

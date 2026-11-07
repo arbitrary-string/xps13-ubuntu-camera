@@ -1,0 +1,37 @@
+#!/usr/bin/make -f
+# SPDX-License-Identifier: GPL-2.0-or-later
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+include /usr/share/dpkg/buildflags.mk
+
+RELAYD_BUILD := debian/relayd-build
+
+%:
+	dh $@ --with dkms
+
+# The repository has no top-level build system; only the relay is compiled.
+override_dh_auto_configure override_dh_auto_test override_dh_auto_install:
+
+override_dh_auto_build:
+	rm -rf $(RELAYD_BUILD) && mkdir -p $(RELAYD_BUILD)
+	cp third_party/v4l2-relayd/src/v4l2-relayd.c $(RELAYD_BUILD)/
+	patch -d $(RELAYD_BUILD) -p2 < patches/v4l2-relayd/0001-fix-timestamps-and-appsink-sync.patch
+	echo '#define V4L2_RELAYD_VERSION "0.2.0+xps13"' > $(RELAYD_BUILD)/config.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DHAVE_CONFIG_H -I$(RELAYD_BUILD) -Wall \
+	  -o $(RELAYD_BUILD)/v4l2-relayd $(RELAYD_BUILD)/v4l2-relayd.c $(LDFLAGS) \
+	  $(shell pkg-config --cflags --libs glib-2.0 gstreamer-1.0 gstreamer-app-1.0 gstreamer-video-1.0)
+
+override_dh_auto_clean:
+	rm -rf $(RELAYD_BUILD)
+
+execute_after_dh_install:
+	install -D -m 0755 scripts/check-cameras.sh debian/xps13-ubuntu-camera/usr/bin/xps13-camera-check
+	install -D -m 0755 scripts/grant-chrome-camera.sh debian/xps13-ubuntu-camera/usr/bin/xps13-camera-chrome-fix
+	install -D -m 0755 $(RELAYD_BUILD)/v4l2-relayd debian/xps13-ubuntu-camera-zoom/usr/bin/v4l2-relayd
+
+override_dh_dkms:
+	dh_dkms -pxps13-ubuntu-camera -V 1.1 -- dkms/hm1092-dell/dkms.conf
+
+override_dh_fixperms:
+	dh_fixperms
+	find debian/xps13-ubuntu-camera/usr/src -type f -exec chmod 0644 {} +
+	chmod 0755 debian/xps13-ubuntu-camera/usr/src/ipu6-isys-pmguard-1.0/build.sh

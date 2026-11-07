@@ -1,0 +1,26 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+set -e
+RELAYD=/usr/bin/v4l2-relayd
+if [ "$1" = install ] || [ "$1" = upgrade ]; then
+	# A hand-made "local" divert from the manual instructions: drop the hand-installed binary
+	# and give the original back before taking over the divert as a package.
+	if dpkg-divert --list "$RELAYD" | grep -q '^local diversion'; then
+		echo "xps13-ubuntu-camera-zoom: replacing hand-installed patched v4l2-relayd"
+		rm -f "$RELAYD"
+		dpkg-divert --local --remove --rename --divert "$RELAYD.distrib" "$RELAYD"
+	fi
+	dpkg-divert --package xps13-ubuntu-camera-zoom --add --rename --divert "$RELAYD.distrib" "$RELAYD"
+	# Disable a hand-made relay instance for the same camera (would start a second relay).
+	for f in /etc/v4l2-relayd.d/*.conf; do
+		[ -f "$f" ] || continue
+		[ "$f" = /etc/v4l2-relayd.d/xps13-webcam.conf ] && continue
+		if grep -q 'relay the OV02C10' "$f"; then
+			deb-systemd-invoke stop "v4l2-relayd@$(basename "$f" .conf).service" 2>/dev/null || true
+			mv "$f" "$f.xps13-replaced"
+			echo "xps13-ubuntu-camera-zoom: disabled hand-made $f (kept as $f.xps13-replaced)"
+		fi
+	done
+fi
+#DEBHELPER#
+exit 0

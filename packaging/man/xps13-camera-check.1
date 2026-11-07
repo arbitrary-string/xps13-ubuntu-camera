@@ -1,0 +1,13 @@
+.\" SPDX-License-Identifier: GPL-2.0-or-later
+.TH XPS13-CAMERA-CHECK 1 "November 2026" "xps13-ubuntu-camera 0.1.0"
+.SH NAME
+xps13-camera-check \- read-only health check of the Dell XPS 13 camera stack
+.SH SYNOPSIS
+.B xps13-camera-check
+.SH DESCRIPTION
+Prints the state of every layer: IPU firmware, sensor drivers, sensors still waiting to bind,
+sensor control nodes, camera drivers inside the initramfs, libcamera cameras, PipeWire sources,
+the IR illuminator and the Zoom virtual camera relay. Changes nothing; some checks use sudo.
+.SH SEE ALSO
+.BR xps13-camera-setup (8),
+/usr/share/doc/xps13-ubuntu-camera/troubleshooting.md.gz

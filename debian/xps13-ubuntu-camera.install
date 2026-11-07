@@ -1,0 +1,10 @@
+dkms/hm1092-dell/hm1092.c usr/src/hm1092-dell-1.1/
+dkms/hm1092-dell/Makefile usr/src/hm1092-dell-1.1/
+packaging/ipu6-pmguard/build.sh usr/src/ipu6-isys-pmguard-1.0/
+packaging/ipu6-pmguard/Makefile usr/src/ipu6-isys-pmguard-1.0/
+packaging/ipu6-pmguard/dkms.conf usr/src/ipu6-isys-pmguard-1.0/
+dkms/ipu6-isys-pmguard/pmguard.patch usr/src/ipu6-isys-pmguard-1.0/
+packaging/dracut/90-xps13-camera.conf etc/dracut.conf.d/
+packaging/wireplumber/50-xps13-camera.conf usr/share/wireplumber/wireplumber.conf.d/
+packaging/systemd-user/xps13-camera-wait.conf usr/lib/systemd/user/wireplumber.service.d/
+packaging/bin/xps13-camera-setup usr/sbin/

@@ -1,0 +1,1 @@
+packaging/wireplumber/51-xps13-camera-hide-loopback.conf usr/share/wireplumber/wireplumber.conf.d/

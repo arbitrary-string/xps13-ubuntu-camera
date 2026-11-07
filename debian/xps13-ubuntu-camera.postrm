@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+set -e
+#DEBHELPER#
+if [ "$1" = purge ] && command -v update-initramfs >/dev/null 2>&1; then
+	update-initramfs -u -k all || true
+fi
+exit 0

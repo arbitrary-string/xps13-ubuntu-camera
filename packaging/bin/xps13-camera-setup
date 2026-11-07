@@ -1,0 +1,94 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+# xps13-camera-setup - detect the Dell XPS 13 model / Intel IPU camera hardware and apply or
+# report the model-specific parts of xps13-ubuntu-camera.
+#
+#   xps13-camera-setup                show what was detected and what is (or should be) installed
+#   xps13-camera-setup --camera-id    print the RGB webcam's libcamera ID (ACPI path), e.g. \_SB_.LNK1
+#   xps13-camera-setup --configure    (root) apply model-specific parts; run by the package postinst
+#   xps13-camera-setup --unconfigure  (root) undo --configure; run by the package prerm
+set -eu
+
+PMGUARD=ipu6-isys-pmguard
+PMGUARD_VER=1.0
+
+product=$(cat /sys/class/dmi/id/product_name 2>/dev/null || echo unknown)
+
+has_intel_pci() {
+	for d in /sys/bus/pci/devices/*; do
+		[ "$(cat "$d/vendor" 2>/dev/null)" = 0x8086 ] && [ "$(cat "$d/device" 2>/dev/null)" = "$1" ] && return 0
+	done
+	return 1
+}
+acpi_present() {
+	st=$(cat "/sys/bus/acpi/devices/$1/status" 2>/dev/null || echo 0)
+	[ "$st" != 0 ]
+}
+
+ipu=none
+has_intel_pci 0x7d19 && ipu=ipu6     # Meteor Lake IPU6 (XPS 13 9340)
+has_intel_pci 0x645d && ipu=ipu7     # Lunar Lake IPU7 (XPS 13 9350)
+rgb_id=$(cat /sys/bus/acpi/devices/OVTI02C1:00/path 2>/dev/null || true)
+ir_present=no; acpi_present HIMX1092:00 && ir_present=yes
+
+case "$product" in
+	"XPS 13 9340"|"XPS 13 9350") support=tested ;;
+	*) if [ "$ipu" != none ] && [ "$ir_present" = yes ] && [ -n "$rgb_id" ]; then support=untested; else support=unsupported; fi ;;
+esac
+
+kbase() { k=$(uname -r); echo "${k%%-*}"; }
+pmguard_state() { dkms status -m "$PMGUARD" -v "$PMGUARD_VER" 2>/dev/null | grep -m 1 installed || true; }
+
+status() {
+	echo "Model:          $product ($support)"
+	echo "Camera unit:    $ipu"
+	echo "RGB sensor:     OV02C10 ${rgb_id:-not found}"
+	echo "IR sensor:      HM1092 $( [ "$ir_present" = yes ] && echo present || echo 'not found')"
+	echo "HM1092 driver:  $(dkms status -m hm1092-dell 2>/dev/null | head -n 1 || true)"
+	if [ "$ipu" = ipu6 ]; then
+		st=$(pmguard_state)
+		echo "IPU6 crash fix: ${st:-NOT installed - run: sudo apt install linux-source-$(kbase) && sudo xps13-camera-setup --configure}"
+	fi
+	if [ -f /run/reboot-required ]; then echo "A reboot is required to finish setup."; fi
+}
+
+configure() {
+	[ "$(id -u)" = 0 ] || { echo "--configure must run as root" >&2; exit 1; }
+	if [ "$support" = unsupported ]; then
+		echo "xps13-camera-setup: this machine ($product) does not have the IPU + OV02C10 + HM1092 hardware these fixes target." >&2
+		echo "xps13-camera-setup: nothing model-specific was configured." >&2
+		return 0
+	fi
+	[ "$support" = untested ] && echo "xps13-camera-setup: $product is not a tested model; applying the generic parts only." >&2
+
+	if [ "$ipu" = ipu6 ]; then
+		if [ -n "$(pmguard_state)" ]; then
+			:
+		elif ls /usr/src/linux-source-"$(kbase)"/linux-source-"$(kbase)".tar.* >/dev/null 2>&1; then
+			echo "xps13-camera-setup: IPU6 detected - building the IPU6 boot-crash fix (ipu6-isys-pmguard)"
+			dkms add "$PMGUARD/$PMGUARD_VER" >/dev/null 2>&1 || true
+			dkms install "$PMGUARD/$PMGUARD_VER" || echo "xps13-camera-setup: WARNING: ipu6-isys-pmguard failed to build; see 'dkms status'" >&2
+		else
+			echo "xps13-camera-setup: IPU6 detected. For the IPU6 boot-crash fix, run:" >&2
+			echo "    sudo apt install linux-source-$(kbase) && sudo xps13-camera-setup --configure" >&2
+		fi
+	fi
+	touch /run/reboot-required 2>/dev/null || true
+	echo "xps13-camera-setup: reboot to activate the camera drivers. Afterwards run: xps13-camera-check"
+}
+
+unconfigure() {
+	[ "$(id -u)" = 0 ] || { echo "--unconfigure must run as root" >&2; exit 1; }
+	if dkms status -m "$PMGUARD" -v "$PMGUARD_VER" 2>/dev/null | grep -q .; then
+		dkms remove "$PMGUARD/$PMGUARD_VER" --all || true
+	fi
+}
+
+case "${1:-}" in
+	""|--status) status ;;
+	--camera-id) [ -n "$rgb_id" ] && echo "$rgb_id" || { echo "OV02C10 (OVTI02C1) not found" >&2; exit 1; } ;;
+	--configure) configure ;;
+	--unconfigure) unconfigure ;;
+	-h|--help) sed -n '3,9p' "$0" | sed 's/^# \{0,1\}//' ;;
+	*) echo "unknown option: $1" >&2; exit 2 ;;
+esac

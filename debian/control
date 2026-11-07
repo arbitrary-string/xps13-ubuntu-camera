@@ -1,0 +1,45 @@
+Source: xps13-ubuntu-camera
+Section: kernel
+Priority: optional
+Maintainer: arbitrary-string <arbitrarystring@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               dh-dkms,
+               pkgconf,
+               libglib2.0-dev,
+               libgstreamer1.0-dev,
+               libgstreamer-plugins-base1.0-dev
+Standards-Version: 4.7.0
+Homepage: https://github.com/arbitrary-string/xps13-ubuntu-camera
+Vcs-Git: https://github.com/arbitrary-string/xps13-ubuntu-camera.git
+Vcs-Browser: https://github.com/arbitrary-string/xps13-ubuntu-camera
+Rules-Requires-Root: no
+
+Package: xps13-ubuntu-camera
+Architecture: all
+Depends: ${misc:Depends}, dkms, kmod, dracut | initramfs-tools
+Recommends: libspa-0.2-libcamera, gstreamer1.0-libcamera, libcamera-tools, v4l-utils
+Suggests: xps13-ubuntu-camera-zoom, linux-source
+Description: webcam and IR camera support for Dell XPS 13 9340/9350
+ Makes the built-in RGB webcam (OmniVision OV02C10) and the IR face-login
+ camera (Himax HM1092) work on the Dell XPS 13 9340 (Intel IPU6) and
+ XPS 13 9350 (Intel IPU7):
+  - HM1092 IR sensor driver (DKMS). Without it the IPU never registers the
+    webcam either, because it waits for every sensor listed in ACPI.
+  - IPU6 boot-time crash fix (DKMS, built only on IPU6 machines, needs the
+    matching linux-source package).
+  - initramfs configuration keeping the camera drivers out of the boot image,
+    where their undeclared firmware is missing.
+  - WirePlumber configuration: hide raw IPU capture nodes, name the cameras
+    "Front Camera" and "IR Camera", wait for the camera at login.
+  - xps13-camera-check, xps13-camera-setup and xps13-camera-chrome-fix tools.
+
+Package: xps13-ubuntu-camera-zoom
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, xps13-ubuntu-camera (= ${source:Version}),
+         v4l2-relayd (>= 0.2.0), v4l2-relayd (<< 0.2.1~)
+Description: virtual webcam for Zoom and other V4L2-only apps on Dell XPS 13
+ Apps that only use V4L2 directly (such as the Zoom snap) cannot use the
+ libcamera-only IPU cameras. This package provides a "Virtual Camera"
+ (v4l2loopback) fed from the RGB webcam on demand, using a patched
+ v4l2-relayd that fixes frame timestamps and libcamera appsink stalls.
+ The real camera is only switched on while an app uses the virtual one.

@@ -1,0 +1,6 @@
+xps13-ubuntu-camera (0.1.0) stonking; urgency=medium
+
+  * Initial package: HM1092 DKMS driver, IPU6 crash fix, initramfs and
+    WirePlumber configuration, model detection, Zoom virtual camera.
+
+ -- arbitrary-string <arbitrarystring@gmail.com>  Sat, 07 Nov 2026 12:00:00 -0500

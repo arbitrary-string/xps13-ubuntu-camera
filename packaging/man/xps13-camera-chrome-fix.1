@@ -1,0 +1,16 @@
+.\" SPDX-License-Identifier: GPL-2.0-or-later
+.TH XPS13-CAMERA-CHROME-FIX 1 "November 2026" "xps13-ubuntu-camera 0.1.0"
+.SH NAME
+xps13-camera-chrome-fix \- allow Google Chrome to use the camera through the desktop portal
+.SH SYNOPSIS
+.B xps13-camera-chrome-fix
+.RB [ yes | no ]
+.SH DESCRIPTION
+With Chrome's PipeWire camera support enabled, the unsandboxed Chrome asks the
+xdg-desktop-portal for camera access, but GNOME refuses to show the access dialog and the
+request is denied, so video calls (e.g. Google Meet) hang. This stores the answer for
+Chrome's app IDs (google-chrome, com.google.Chrome) in the user's portal permission store,
+as clicking "Allow" would. Run as the desktop user, then restart Chrome.
+Websites still ask for camera permission inside Chrome.
+.SH SEE ALSO
+.BR xps13-camera-check (1)
