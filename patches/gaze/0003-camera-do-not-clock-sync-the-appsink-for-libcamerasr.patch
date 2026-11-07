@@ -1,0 +1,26 @@
+From 8996a6bb8fa623214ee10f5a77b0789c75abdd52 Mon Sep 17 00:00:00 2001
+From: arbitrary-string <arbitrarystring@gmail.com>
+Date: Fri, 6 Nov 2026 21:01:59 -0500
+Subject: [PATCH 3/3] camera: do not clock-sync the appsink for libcamerasrc
+ sources
+
+---
+ crates/gaze-vision/src/camera/mod.rs | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/crates/gaze-vision/src/camera/mod.rs b/crates/gaze-vision/src/camera/mod.rs
+index 00d9b60..0b4d981 100644
+--- a/crates/gaze-vision/src/camera/mod.rs
++++ b/crates/gaze-vision/src/camera/mod.rs
+@@ -619,6 +619,11 @@ impl Camera {
+ 
+         appsink.set_drop(true);
+         appsink.set_max_buffers(1);
++        // libcamerasrc timestamps do not follow the pipeline clock (seen on Intel IPU6), so a
++        // synchronising sink stalls after the first frame. Capture wants the newest frame now.
++        if src_element.trim_start().starts_with("libcamerasrc") {
++            appsink.set_sync(false);
++        }
+ 
+         Self::start_pipeline(&pipeline, camera_source)?;
+ 

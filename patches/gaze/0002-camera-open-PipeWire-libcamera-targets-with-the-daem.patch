@@ -1,0 +1,101 @@
+From 3fc63f36588cffe44008ad1b8442c7040eb5a1b6 Mon Sep 17 00:00:00 2001
+From: arbitrary-string <arbitrarystring@gmail.com>
+Date: Fri, 6 Nov 2026 21:01:59 -0500
+Subject: [PATCH 2/3] camera: open PipeWire libcamera targets with the
+ daemon-owned libcamera
+
+---
+ crates/gaze-vision/src/camera/mod.rs    |  4 +-
+ crates/gaze-vision/src/camera/source.rs | 57 +++++++++++++++++++++++++
+ 2 files changed, 59 insertions(+), 2 deletions(-)
+
+diff --git a/crates/gaze-vision/src/camera/mod.rs b/crates/gaze-vision/src/camera/mod.rs
+index 357ab72..00d9b60 100644
+--- a/crates/gaze-vision/src/camera/mod.rs
++++ b/crates/gaze-vision/src/camera/mod.rs
+@@ -395,8 +395,8 @@ impl Camera {
+         // A `libcamera:<name>` source names a camera only libcamera can drive (Intel IPU6/IPU7
+         // MIPI sensors). The daemon runs libcamera itself, exactly as the `primary` fallback
+         // does, so no user-session PipeWire is involved and no injected frames can reach it.
+-        if let Some(name) = parse_libcamera_spec(camera_source) {
+-            let src_element = libcamera_source_element(name);
++        if let Some(name) = libcamera_camera_for_source(camera_source) {
++            let src_element = libcamera_source_element(&name);
+             info!("Opening {camera_source:?} through {src_element}");
+             return Self::open_with_frame_size_fallback(camera_source, frame_size, |size| {
+                 Self::open_source_element(&src_element, camera_source, false, None, size)
+diff --git a/crates/gaze-vision/src/camera/source.rs b/crates/gaze-vision/src/camera/source.rs
+index d24b709..56d803a 100644
+--- a/crates/gaze-vision/src/camera/source.rs
++++ b/crates/gaze-vision/src/camera/source.rs
+@@ -498,6 +498,51 @@ pub fn parse_libcamera_spec(source: &str) -> Option<&str> {
+         .filter(|name| !name.is_empty())
+ }
+ 
++/// WirePlumber's prefix for the PipeWire node of a libcamera source.
++pub const PIPEWIRE_LIBCAMERA_NODE_PREFIX: &str = "libcamera_input.";
++
++/// WirePlumber's node-name sanitising: anything outside `[A-Za-z0-9_.-]` becomes `_`.
++pub(super) fn wireplumber_sanitize(name: &str) -> String {
++    name.chars()
++        .map(|c| {
++            if c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.') {
++                c
++            } else {
++                '_'
++            }
++        })
++        .collect()
++}
++
++/// The libcamera camera, among `cameras`, that a PipeWire `libcamera_input.<id>` target names.
++pub(super) fn libcamera_camera_for_target<'a>(
++    target: &str,
++    cameras: &'a [String],
++) -> Option<&'a str> {
++    let id = target.strip_prefix(PIPEWIRE_LIBCAMERA_NODE_PREFIX)?;
++    cameras
++        .iter()
++        .find(|camera| wireplumber_sanitize(camera) == id)
++        .map(String::as_str)
++}
++
++/// The libcamera camera a configured source names: either `libcamera:<name>` or a
++/// `pipewiresrc target-object=libcamera_input.<id>` choice saved by the GUI. The daemon opens
++/// that camera with its own libcamera instance and never reads from the PipeWire session.
++pub fn libcamera_camera_for_source(source: &str) -> Option<String> {
++    if let Some(name) = parse_libcamera_spec(source) {
++        return Some(name.to_string());
++    }
++    let V4l2Fallback::SameNode(target) = v4l2_fallback_for(source.trim()) else {
++        return None;
++    };
++    if !target.starts_with(PIPEWIRE_LIBCAMERA_NODE_PREFIX) {
++        return None;
++    }
++    let cameras = libcamera_camera_names();
++    libcamera_camera_for_target(&target, &cameras).map(str::to_string)
++}
++
+ /// Names of the cameras libcamera currently exposes through `libcamerasrc`.
+ pub fn libcamera_camera_names() -> Vec<String> {
+     if gstreamer::init().is_err() || gstreamer::ElementFactory::find("libcamerasrc").is_none() {
+@@ -626,6 +671,18 @@ mod tests {
+         assert_eq!(parse_libcamera_spec("/dev/video0"), None);
+     }
+ 
++    #[test]
++    fn pipewire_libcamera_targets_map_back_to_their_camera() {
++        let cameras = vec!["\\_SB_.PC00.LNK0".to_string(), "\\_SB_.PC00.LNK1".to_string()];
++        assert_eq!(
++            libcamera_camera_for_target("libcamera_input.__SB_.PC00.LNK1", &cameras),
++            Some("\\_SB_.PC00.LNK1")
++        );
++        assert_eq!(libcamera_camera_for_target("libcamera_input.nope", &cameras), None);
++        assert_eq!(libcamera_camera_for_target("v4l2_input.pci-0000_00_14.0", &cameras), None);
++        assert_eq!(wireplumber_sanitize("/base/i2c@1:cam 0"), "_base_i2c_1_cam_0");
++    }
++
+     #[test]
+     fn libcamera_specs_classify_as_libcamerasrc() {
+         assert_eq!(

@@ -1,0 +1,89 @@
+--- hm1092.c.v1.0	2026-11-03 23:56:41.120207373 -0500
++++ hm1092.c	2026-11-03 23:56:41.131795900 -0500
+@@ -23,6 +23,7 @@
+ #include <linux/delay.h>
+ #include <linux/gpio/consumer.h>
+ #include <linux/i2c.h>
++#include <linux/leds.h>
+ #include <linux/module.h>
+ #include <linux/pm_runtime.h>
+ #include <linux/regulator/consumer.h>
+@@ -439,6 +440,7 @@
+ 
+ 	struct gpio_desc *reset;
+ 	struct gpio_desc *ir_led;
++	struct led_classdev *ir_flood;
+ };
+ 
+ static inline struct hm1092 *to_hm1092(struct v4l2_subdev *sd)
+@@ -446,6 +448,27 @@
+ 	return container_of(sd, struct hm1092, sd);
+ }
+ 
++/*
++ * Drive the IR flood illuminator. It is either a GPIO owned by the sensor or,
++ * on INT3472 platforms, an LED class device the power-control device
++ * registered for this sensor under con_id "ir_flood". Either may be absent.
++ */
++static void hm1092_set_ir_flood(struct hm1092 *hm, bool on)
++{
++	int ret;
++
++	gpiod_set_value_cansleep(hm->ir_led, on);
++
++	if (!hm->ir_flood)
++		return;
++
++	ret = led_set_brightness_sync(hm->ir_flood,
++				      on ? hm->ir_flood->max_brightness : LED_OFF);
++	if (ret)
++		dev_warn(hm->dev, "failed to switch IR flood LED %s: %d\n",
++			 on ? "on" : "off", ret);
++}
++
+ static int hm1092_set_ctrl(struct v4l2_ctrl *ctrl)
+ {
+ 	struct hm1092 *hm = container_of(ctrl->handler, struct hm1092,
+@@ -688,7 +711,7 @@
+ 	}
+ 
+ 	/* The illuminator is only powered while the sensor is streaming. */
+-	gpiod_set_value_cansleep(hm->ir_led, 1);
++	hm1092_set_ir_flood(hm, true);
+ 
+ 	return 0;
+ 
+@@ -705,7 +728,7 @@
+ 	struct hm1092 *hm = to_hm1092(sd);
+ 	int ret;
+ 
+-	gpiod_set_value_cansleep(hm->ir_led, 0);
++	hm1092_set_ir_flood(hm, false);
+ 
+ 	ret = cci_write(hm->regmap, HM1092_REG_MODE_SELECT,
+ 			HM1092_MODE_STANDBY, NULL);
+@@ -1025,6 +1048,15 @@
+ 		return dev_err_probe(dev, PTR_ERR(hm->ir_led),
+ 				     "failed to get ir-led GPIO\n");
+ 
++	/* IR flood LED registered for this sensor by INT3472, if any. */
++	hm->ir_flood = devm_led_get(dev, "ir_flood");
++	if (IS_ERR(hm->ir_flood)) {
++		if (PTR_ERR(hm->ir_flood) != -ENOENT)
++			return dev_err_probe(dev, PTR_ERR(hm->ir_flood),
++					     "failed to get ir_flood LED\n");
++		hm->ir_flood = NULL;
++	}
++
+ 	ret = hm1092_power_on(dev);
+ 	if (ret)
+ 		return dev_err_probe(dev, ret, "failed to power on sensor\n");
+@@ -1105,7 +1137,7 @@
+ 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+ 	struct hm1092 *hm = to_hm1092(sd);
+ 
+-	gpiod_set_value_cansleep(hm->ir_led, 0);
++	hm1092_set_ir_flood(hm, false);
+ 
+ 	v4l2_async_unregister_subdev(sd);
+ 	v4l2_subdev_cleanup(sd);

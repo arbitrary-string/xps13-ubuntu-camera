@@ -1,0 +1,39 @@
+--- a/src/v4l2-relayd.c
++++ b/src/v4l2-relayd.c
+@@ -171,10 +171,16 @@
+   GstBuffer *buffer;
+ 
+   sample = gst_app_sink_pull_sample (appsink);
+-  buffer = gst_sample_get_buffer (sample);
+-  /* gst_app_src_push_buffer wants to take the ownership of the buffer,
+-   * so it must hold an additional reference first. */
+-  gst_buffer_ref (buffer);
++  if (sample == NULL)
++    return GST_FLOW_OK;
++  /* Local patch: hand the frame over without its source timestamps. Sources
++   * such as libcamerasrc stamp buffers on their own timeline, which does not
++   * match the output pipeline's, so v4l2sink dropped every frame as late.
++   * The shallow copy shares the memory; appsrc re-stamps it (do-timestamp). */
++  buffer = gst_buffer_copy (gst_sample_get_buffer (sample));
++  GST_BUFFER_PTS (buffer) = GST_CLOCK_TIME_NONE;
++  GST_BUFFER_DTS (buffer) = GST_CLOCK_TIME_NONE;
++  GST_BUFFER_DURATION (buffer) = GST_CLOCK_TIME_NONE;
+   gst_app_src_push_buffer (appsrc, buffer);
+   gst_sample_unref (sample);
+ 
+@@ -230,6 +236,7 @@
+                 "caps", caps,
+                 "drop", TRUE,
+                 "max-buffers", 4,
++                "sync", FALSE,
+                 "emit-signals", TRUE,
+                 NULL);
+   g_signal_connect_object (appsink,
+@@ -435,6 +442,7 @@
+                 "stream-type", GST_APP_STREAM_TYPE_STREAM,
+                 "format", GST_FORMAT_DEFAULT,
+                 "is-live", TRUE,
++                "do-timestamp", TRUE,
+                 "emit-signals", FALSE,
+                 NULL);
+   gst_object_unref (appsrc);

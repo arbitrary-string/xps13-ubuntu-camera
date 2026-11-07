@@ -1,0 +1,140 @@
+From ed6dfdd049d2ead6b3abb830aa7fa80ff0143a20 Mon Sep 17 00:00:00 2001
+From: arbitrary-string <arbitrarystring@gmail.com>
+Date: Fri, 6 Nov 2026 21:01:59 -0500
+Subject: [PATCH 1/3] camera: add libcamera:<name> source for IPU6/IPU7 MIPI
+ cameras
+
+---
+ crates/gaze-vision/src/camera/mod.rs    | 15 ++++++
+ crates/gaze-vision/src/camera/source.rs | 71 +++++++++++++++++++++++++
+ 2 files changed, 86 insertions(+)
+
+diff --git a/crates/gaze-vision/src/camera/mod.rs b/crates/gaze-vision/src/camera/mod.rs
+index 319b676..357ab72 100644
+--- a/crates/gaze-vision/src/camera/mod.rs
++++ b/crates/gaze-vision/src/camera/mod.rs
+@@ -392,6 +392,21 @@ impl Camera {
+         frame_size: Option<(u32, u32)>,
+     ) -> anyhow::Result<Self> {
+         gstreamer::init()?;
++        // A `libcamera:<name>` source names a camera only libcamera can drive (Intel IPU6/IPU7
++        // MIPI sensors). The daemon runs libcamera itself, exactly as the `primary` fallback
++        // does, so no user-session PipeWire is involved and no injected frames can reach it.
++        if let Some(name) = parse_libcamera_spec(camera_source) {
++            let src_element = libcamera_source_element(name);
++            info!("Opening {camera_source:?} through {src_element}");
++            return Self::open_with_frame_size_fallback(camera_source, frame_size, |size| {
++                Self::open_source_element(&src_element, camera_source, false, None, size)
++            })
++            .map_err(|err| {
++                let detail = format!("{err:#}");
++                let hint = libcamera_negotiation_hint(&detail).unwrap_or_default();
++                anyhow::anyhow!("libcamera capture of {camera_source:?} failed: {detail}{hint}")
++            });
++        }
+         let Some(node) = resolve_privileged_node(camera_source, want_color) else {
+             let err = if camera_disconnected(camera_source, want_color) {
+                 anyhow::anyhow!("camera {camera_source:?} is not connected")
+diff --git a/crates/gaze-vision/src/camera/source.rs b/crates/gaze-vision/src/camera/source.rs
+index 250e089..d24b709 100644
+--- a/crates/gaze-vision/src/camera/source.rs
++++ b/crates/gaze-vision/src/camera/source.rs
+@@ -219,6 +219,14 @@ pub(super) fn classify_source(source: &str, want_color: bool) -> anyhow::Result<
+         }
+         return Ok(SourceElement::Element(format!("v4l2src device={source}")));
+     }
++    if source.starts_with(LIBCAMERA_SOURCE_PREFIX) {
++        let Some(name) = parse_libcamera_spec(source) else {
++            anyhow::bail!(
++                "invalid libcamera camera spec {source:?}; expected libcamera:<camera name>"
++            );
++        };
++        return Ok(SourceElement::Element(libcamera_source_element(name)));
++    }
+     Ok(SourceElement::Element(source.to_string()))
+ }
+ 
+@@ -477,6 +485,46 @@ pub(super) fn libcamera_source_element(camera_name: &str) -> String {
+     format!("libcamerasrc camera-name=\"{escaped}\"")
+ }
+ 
++/// Prefix that names a libcamera camera directly, e.g. `libcamera:\_SB_.PC00.LNK0` for an Intel
++/// IPU6/IPU7 MIPI sensor whose `/dev/video*` nodes are raw capture nodes only libcamera can drive.
++pub const LIBCAMERA_SOURCE_PREFIX: &str = "libcamera:";
++
++/// The camera name in a `libcamera:<name>` spec, if `source` is one.
++pub fn parse_libcamera_spec(source: &str) -> Option<&str> {
++    source
++        .trim()
++        .strip_prefix(LIBCAMERA_SOURCE_PREFIX)
++        .map(str::trim)
++        .filter(|name| !name.is_empty())
++}
++
++/// Names of the cameras libcamera currently exposes through `libcamerasrc`.
++pub fn libcamera_camera_names() -> Vec<String> {
++    if gstreamer::init().is_err() || gstreamer::ElementFactory::find("libcamerasrc").is_none() {
++        return Vec::new();
++    }
++    let monitor = gstreamer::DeviceMonitor::new();
++    monitor.add_filter(Some("Video/Source"), None);
++    if monitor.start().is_err() {
++        return Vec::new();
++    }
++    wait_for_device_updates(&monitor);
++    let devices = monitor.devices();
++    monitor.stop();
++
++    devices
++        .iter()
++        .filter_map(|device| {
++            let element = device.create_element(None).ok()?;
++            let factory = element.factory()?;
++            if factory.name().as_str() != "libcamerasrc" {
++                return None;
++            }
++            element.property::<Option<String>>("camera-name")
++        })
++        .collect()
++}
++
+ pub(super) const V4L2_BY_PATH_DIR: &str = "/dev/v4l/by-path";
+ 
+ /// PipeWire names a V4L2 camera `v4l2_input.<udev ID_PATH>` with `:` rewritten as `_`, and udev
+@@ -533,6 +581,9 @@ pub(super) fn pipewire_target_nodes(target: &str) -> Option<Vec<String>> {
+ 
+ pub fn camera_disconnected(source: &str, want_color: bool) -> bool {
+     let source = source.trim();
++    if let Some(name) = parse_libcamera_spec(source) {
++        return !libcamera_camera_names().iter().any(|camera| camera == name);
++    }
+     if let V4l2Fallback::SameNode(target) = v4l2_fallback_for(source) {
+         return pipewire_target_nodes(&target).is_some_and(|nodes| nodes.is_empty());
+     }
+@@ -564,6 +615,26 @@ pub(super) fn node_from_pipewire_target(target: &str, want_color: bool) -> Optio
+ mod tests {
+     use super::*;
+ 
++    #[test]
++    fn libcamera_specs_name_a_camera() {
++        assert_eq!(
++            parse_libcamera_spec("libcamera:\\_SB_.PC00.LNK0"),
++            Some("\\_SB_.PC00.LNK0")
++        );
++        assert_eq!(parse_libcamera_spec("  libcamera: cam1 "), Some("cam1"));
++        assert_eq!(parse_libcamera_spec("libcamera:"), None);
++        assert_eq!(parse_libcamera_spec("/dev/video0"), None);
++    }
++
++    #[test]
++    fn libcamera_specs_classify_as_libcamerasrc() {
++        assert_eq!(
++            classify_source("libcamera:\\_SB_.PC00.LNK0", false).unwrap(),
++            SourceElement::Element("libcamerasrc camera-name=\"\\\\_SB_.PC00.LNK0\"".into())
++        );
++        assert!(classify_source("libcamera:", true).is_err());
++    }
++
+     #[test]
+     fn a_pipewire_target_names_the_udev_path_of_its_node() {
+         assert_eq!(

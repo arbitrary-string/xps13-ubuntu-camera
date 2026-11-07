@@ -1,0 +1,11 @@
+--- ipu-bridge.c.orig	2026-11-03 23:07:34.618503090 -0500
++++ ipu-bridge.c	2026-11-03 23:07:42.745812415 -0500
+@@ -57,8 +57,6 @@
+  * Please keep the list sorted by ACPI HID.
+  */
+ static const struct ipu_sensor_config ipu_supported_sensors[] = {
+-	/* Himax HM1092 */
+-	IPU_SENSOR_CONFIG("HIMX1092", 2, 180000000, 180480000),
+ 	/* Himax HM11B1 */
+ 	IPU_SENSOR_CONFIG("HIMX11B1", 1, 384000000),
+ 	/* Himax HM2170 */

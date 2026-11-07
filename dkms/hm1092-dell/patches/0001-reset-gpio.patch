@@ -1,0 +1,44 @@
+--- hm1092.c.orig	2026-11-03 23:49:05.155125097 -0500
++++ hm1092.c	2026-11-03 23:49:05.165063013 -0500
+@@ -437,6 +437,7 @@
+ 
+ 	struct clk *extclk;
+ 
++	struct gpio_desc *reset;
+ 	struct gpio_desc *ir_led;
+ };
+ 
+@@ -853,6 +854,12 @@
+ 	if (ret)
+ 		goto err_dvdd;
+ 
++	/*
++	 * On platforms where the INT3472 power-control device owns the sensor
++	 * reset line (e.g. Dell XPS 13 9340, IPU6), release it here.
++	 */
++	gpiod_set_value_cansleep(hm->reset, 0);
++
+ 	/* Let the sensor boot after power-on before touching its registers. */
+ 	msleep(HM1092_POWER_ON_DELAY_MS);
+ 
+@@ -876,6 +883,7 @@
+ 	struct v4l2_subdev *sd = dev_get_drvdata(dev);
+ 	struct hm1092 *hm = to_hm1092(sd);
+ 
++	gpiod_set_value_cansleep(hm->reset, 1);
+ 	clk_disable_unprepare(hm->extclk);
+ 
+ 	if (hm->dvdd)
+@@ -999,6 +1007,12 @@
+ 		return dev_err_probe(dev, PTR_ERR(hm->extclk),
+ 				     "failed to get external clock\n");
+ 
++	/* Optional active-low reset, provided by INT3472 on some platforms. */
++	hm->reset = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
++	if (IS_ERR(hm->reset))
++		return dev_err_probe(dev, PTR_ERR(hm->reset),
++				     "failed to get reset GPIO\n");
++
+ 	/*
+ 	 * IR flood illuminator. On some platforms the GPIO is claimed by the
+ 	 * camera power-control device and exposed as an LED class device

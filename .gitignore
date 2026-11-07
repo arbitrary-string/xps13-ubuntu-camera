@@ -1,0 +1,23 @@
+# Working area: kernel source, firmware dumps (one contains a Windows product key),
+# camera captures (photos), browser profiles, build output. Never publish.
+scratch/
+
+# Belt and braces: never commit these even if copied outside scratch/
+*.dat
+*.dsl
+*.aml
+msdm*
+*.ppm
+*.png
+*.jpg
+*.raw
+*.yuyv
+*.ko
+*.ko.zst
+*.o
+*.deb
+*.tar.*
+initrd.img*
+build/
+target/
+*.log

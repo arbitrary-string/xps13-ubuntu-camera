@@ -1,0 +1,7 @@
+# Excerpt for /etc/gaze/config.toml [cameras] on the Dell XPS 13 9340 (IPU6).
+# Requires the patched gazed (patches/gaze). These are the values the Gaze GUI writes when you
+# pick "Front Camera" / "IR Camera"; the patched daemon opens them through its own libcamera.
+rgb = "pipewiresrc target-object=libcamera_input.__SB_.PC00.LNK1"
+ir = "pipewiresrc target-object=libcamera_input.__SB_.PC00.LNK0"
+emitter_enabled = false      # the hm1092 driver lights the IR flood LED while streaming
+parallel_capture = "never"   # concurrent RGB+IR capture untested

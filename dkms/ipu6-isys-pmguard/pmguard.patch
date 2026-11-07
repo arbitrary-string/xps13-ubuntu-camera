@@ -1,0 +1,23 @@
+--- ipu6-isys.c.orig	2026-11-03 23:23:48.419502330 -0500
++++ ipu6-isys.c	2026-11-03 23:23:48.428356905 -0500
+@@ -885,6 +885,10 @@
+ 	struct ipu6_isys *isys = dev_get_drvdata(dev);
+ 	unsigned long flags;
+ 
++	/* Runtime suspend can race with isys_probe() before drvdata is set. */
++	if (!isys)
++		return -EBUSY;
++
+ 	spin_lock_irqsave(&isys->power_lock, flags);
+ 	isys->power = 0;
+ 	spin_unlock_irqrestore(&isys->power_lock, flags);
+@@ -907,6 +911,9 @@
+ {
+ 	struct ipu6_isys *isys = dev_get_drvdata(dev);
+ 
++	if (!isys)
++		return 0;
++
+ 	/* If stream is open, refuse to suspend */
+ 	if (isys->stream_opened)
+ 		return -EBUSY;
