@@ -21,3 +21,7 @@ initrd.img*
 build/
 target/
 *.log
+
+# Python bytecode caches
+__pycache__/
+*.pyc
