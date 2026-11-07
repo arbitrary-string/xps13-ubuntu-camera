@@ -1,8 +1,0 @@
-#!/bin/sh
-# SPDX-License-Identifier: GPL-2.0-or-later
-set -e
-if [ "$1" = remove ]; then
-	deb-systemd-invoke stop v4l2-relayd@xps13-webcam.service 2>/dev/null || true
-fi
-#DEBHELPER#
-exit 0

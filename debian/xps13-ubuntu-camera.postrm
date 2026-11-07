@@ -1,6 +1,19 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-2.0-or-later
 set -e
+RELAYD=/usr/bin/v4l2-relayd
+case "$1" in
+	remove|abort-install|disappear)
+		rm -f /etc/v4l2-relayd.d/xps13-webcam.conf
+		if [ "$(dpkg-divert --listpackage "$RELAYD" 2>/dev/null || true)" = xps13-ubuntu-camera ]; then
+			dpkg-divert --package xps13-ubuntu-camera --remove --rename --divert "$RELAYD.distrib" "$RELAYD"
+		fi
+		systemctl --system daemon-reload 2>/dev/null || true
+		;;
+	abort-upgrade)
+		:
+		;;
+esac
 #DEBHELPER#
 if [ "$1" = purge ] && command -v update-initramfs >/dev/null 2>&1; then
 	update-initramfs -u -k all || true

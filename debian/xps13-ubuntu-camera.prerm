@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 set -e
 if [ "$1" = remove ] || [ "$1" = deconfigure ]; then
+	deb-systemd-invoke stop v4l2-relayd@xps13-webcam.service 2>/dev/null || true
 	xps13-camera-setup --unconfigure || true
 fi
 #DEBHELPER#

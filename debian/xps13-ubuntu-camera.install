@@ -8,3 +8,4 @@ packaging/dracut/90-xps13-camera.conf etc/dracut.conf.d/
 packaging/wireplumber/50-xps13-camera.conf usr/share/wireplumber/wireplumber.conf.d/
 packaging/systemd-user/xps13-camera-wait.conf usr/lib/systemd/user/wireplumber.service.d/
 packaging/bin/xps13-camera-setup usr/sbin/
+packaging/wireplumber/51-xps13-camera-hide-loopback.conf usr/share/wireplumber/wireplumber.conf.d/

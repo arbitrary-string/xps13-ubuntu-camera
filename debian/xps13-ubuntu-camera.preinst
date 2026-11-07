@@ -1,6 +1,7 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-2.0-or-later
 set -e
+RELAYD=/usr/bin/v4l2-relayd
 
 # Take over hand-installed copies of the DKMS modules (from the repository's manual
 # instructions) so DKMS does not end up with an unowned duplicate.
@@ -15,15 +16,49 @@ take_over_dkms() {
 	rm -rf "/usr/src/$name-$ver"
 }
 
-if [ "$1" = install ]; then
-	take_over_dkms hm1092-dell 1.1
-	take_over_dkms ipu6-isys-pmguard 1.0
-	# The RGB-only fallback stops the IR driver from binding; it is superseded by this package.
-	if command -v dkms >/dev/null 2>&1 && dkms status -m ipu-bridge-noir 2>/dev/null | grep -q .; then
-		echo "xps13-ubuntu-camera: removing the ipu-bridge-noir fallback (superseded by the HM1092 driver)"
-		dkms remove ipu-bridge-noir/1.0 --all || true
-	fi
-fi
+# Own the diversion of the stock v4l2-relayd, whoever held it before.
+take_over_relayd_divert() {
+	owner=$(dpkg-divert --listpackage "$RELAYD" 2>/dev/null || true)
+	case "$owner" in
+		xps13-ubuntu-camera)
+			return 0 ;;
+		LOCAL)
+			# hand-made divert from the manual instructions; drop the hand-installed binary
+			echo "xps13-ubuntu-camera: replacing hand-installed patched v4l2-relayd"
+			rm -f "$RELAYD"
+			dpkg-divert --local --remove --rename --divert "$RELAYD.distrib" "$RELAYD" ;;
+		xps13-ubuntu-camera-zoom)
+			# the former split package (normally already removed via Conflicts)
+			rm -f "$RELAYD"
+			dpkg-divert --package xps13-ubuntu-camera-zoom --remove --rename --divert "$RELAYD.distrib" "$RELAYD" ;;
+	esac
+	dpkg-divert --package xps13-ubuntu-camera --add --rename --divert "$RELAYD.distrib" "$RELAYD"
+}
+
+case "$1" in
+	install|upgrade)
+		if [ "$1" = install ]; then
+			take_over_dkms hm1092-dell 1.1
+			take_over_dkms ipu6-isys-pmguard 1.0
+			# The RGB-only fallback stops the IR driver from binding; superseded by this package.
+			if command -v dkms >/dev/null 2>&1 && dkms status -m ipu-bridge-noir 2>/dev/null | grep -q .; then
+				echo "xps13-ubuntu-camera: removing the ipu-bridge-noir fallback (superseded by the HM1092 driver)"
+				dkms remove ipu-bridge-noir/1.0 --all || true
+			fi
+		fi
+		take_over_relayd_divert
+		# Disable a hand-made relay instance for the same camera (would start a second relay).
+		for f in /etc/v4l2-relayd.d/*.conf; do
+			[ -f "$f" ] || continue
+			[ "$f" = /etc/v4l2-relayd.d/xps13-webcam.conf ] && continue
+			if grep -q 'relay the OV02C10' "$f"; then
+				deb-systemd-invoke stop "v4l2-relayd@$(basename "$f" .conf).service" 2>/dev/null || true
+				mv "$f" "$f.xps13-replaced"
+				echo "xps13-ubuntu-camera: disabled hand-made $f (kept as $f.xps13-replaced)"
+			fi
+		done
+		;;
+esac
 
 #DEBHELPER#
 exit 0

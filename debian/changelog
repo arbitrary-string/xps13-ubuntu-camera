@@ -1,3 +1,14 @@
+xps13-ubuntu-camera (0.2.0) stonking; urgency=medium
+
+  * Merge xps13-ubuntu-camera-zoom into xps13-ubuntu-camera: one package
+    makes the webcam work for PipeWire apps and, through the Virtual Camera,
+    for apps that open /dev/video* directly. The package is now
+    architecture-specific and Conflicts/Replaces/Provides the old one.
+  * Take over the v4l2-relayd diversion from a manual install, from the old
+    split package, or create it on a fresh install.
+
+ -- arbitrary-string <arbitrarystring@gmail.com>  Sat, 07 Nov 2026 16:00:00 -0500
+
 xps13-ubuntu-camera (0.1.2) stonking; urgency=medium
 
   * WirePlumber rules: use node.disabled only. device.disabled triggers a

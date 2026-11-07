@@ -26,7 +26,7 @@ override_dh_auto_clean:
 execute_after_dh_install:
 	install -D -m 0755 scripts/check-cameras.sh debian/xps13-ubuntu-camera/usr/bin/xps13-camera-check
 	install -D -m 0755 scripts/grant-chrome-camera.sh debian/xps13-ubuntu-camera/usr/bin/xps13-camera-chrome-fix
-	install -D -m 0755 $(RELAYD_BUILD)/v4l2-relayd debian/xps13-ubuntu-camera-zoom/usr/bin/v4l2-relayd
+	install -D -m 0755 $(RELAYD_BUILD)/v4l2-relayd debian/xps13-ubuntu-camera/usr/bin/v4l2-relayd
 
 override_dh_dkms:
 	dh_dkms -pxps13-ubuntu-camera -V 1.1 -- dkms/hm1092-dell/dkms.conf

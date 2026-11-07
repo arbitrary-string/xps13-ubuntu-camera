@@ -1,7 +1,7 @@
 # The preinst only *removes* the local diversion that the project's own manual install
 # instructions told users to create, then takes the diversion over as a package.
-xps13-ubuntu-camera-zoom: package-uses-local-diversion [preinst:*]
+xps13-ubuntu-camera: package-uses-local-diversion [preinst:*]
 # Patched build of v4l2-relayd; upstream ships no manual page either.
-xps13-ubuntu-camera-zoom: no-manual-page [usr/bin/v4l2-relayd]
+xps13-ubuntu-camera: no-manual-page [usr/bin/v4l2-relayd]
 # daemon-reload after generating /etc/v4l2-relayd.d/xps13-webcam.conf (template instance)
-xps13-ubuntu-camera-zoom: maintainer-script-calls-systemctl [*]
+xps13-ubuntu-camera: maintainer-script-calls-systemctl [*]
