@@ -76,6 +76,16 @@ drivers out of the initramfs so they load from the root filesystem.
   `EACCES` and never retries, so the real cameras never appear. → `wait-for-camera.conf`.
 - Both libcamera cameras are called "Built-in Front Camera" and the IR one became the default.
   → `51-camera-names.conf` ("Front Camera" default, "IR Camera").
+- **Hide with `node.disabled`, never `device.disabled`.** In WirePlumber 0.5.17,
+  `scripts/monitors/v4l2/create-device.lua` is an asynchronous hook whose `device.disabled` branch
+  returns without calling `transition:advance()`. The event queue then waits forever, and every device
+  created after it never appears — the libcamera cameras *and the ALSA speakers/microphones*. Whether a
+  device rule matches at that stage depends on boot timing (e.g. the v4l2loopback device with
+  `exclusive_caps`), so a `device.disabled` rule can work for days and then break sound and cameras.
+  The `node.disabled` path in `create-node.lua` advances correctly.
+- The relay's "Virtual Camera" must be hidden from PipeWire too: GNOME Camera opens the first non-IR
+  camera, and the loopback node offers only one fixed format it cannot negotiate
+  ("could not play video stream").
 
 ## Problem 5 — Chrome / Google Meet hangs (both)
 

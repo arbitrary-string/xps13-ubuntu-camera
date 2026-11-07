@@ -13,8 +13,12 @@ if [ "$1" = configure ]; then
 	if [ -e /etc/dracut.conf.d/90-camera-not-in-initramfs.conf ]; then
 		echo "xps13-ubuntu-camera: note: /etc/dracut.conf.d/90-camera-not-in-initramfs.conf (manual install) is now redundant and can be removed."
 	fi
-	if ls /home/*/.config/wireplumber/wireplumber.conf.d/5[012]-*camera*.conf /home/*/.config/wireplumber/wireplumber.conf.d/50-hide-ipu*-raw.conf >/dev/null 2>&1; then
-		echo "xps13-ubuntu-camera: note: per-user WirePlumber camera files from a manual install are now redundant (harmless)."
-	fi
+	# Rules that set device.disabled can stall WirePlumber 0.5.17 (cameras AND audio vanish).
+	for f in /home/*/.config/wireplumber/wireplumber.conf.d/*.conf /etc/wireplumber/wireplumber.conf.d/*.conf; do
+		[ -f "$f" ] || continue
+		if grep -v '^[[:space:]]*#' "$f" | grep -q 'device\.disabled'; then
+			echo "xps13-ubuntu-camera: WARNING: $f uses device.disabled, which can stop WirePlumber from creating cameras and sound devices. Remove it or change it to node.disabled (see /usr/share/doc/xps13-ubuntu-camera/troubleshooting.md.gz)." >&2
+		fi
+	done
 fi
 exit 0

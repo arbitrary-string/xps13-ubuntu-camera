@@ -46,6 +46,20 @@ suggest reloading the sensor module as a workaround — don't.
   `systemctl --user restart wireplumber`.
 - Zoom and other raw-V4L2 apps: use the **Virtual Camera** (v4l2-relayd setup).
 
+## Sound devices AND cameras disappeared (only "Dummy Output")
+
+A WirePlumber rule using `device.disabled` has stalled WirePlumber (bug in 0.5.17, see
+[how-it-works](how-it-works.md#problem-4--apps-see-30-48-useless-ipu6ipu7-cameras-or-none-desktop)).
+Find it with `grep -rn 'device.disabled' ~/.config/wireplumber /etc/wireplumber /usr/share/wireplumber/wireplumber.conf.d`,
+change it to `node.disabled` (or remove the file), then `systemctl --user restart wireplumber`.
+Avoid restarting WirePlumber repeatedly while debugging — it also owns your audio devices; a reboot
+resets everything cleanly.
+
+## GNOME Camera: "could not play video stream"
+
+It picked "Virtual Camera (V4L2)". Make sure the loopback hide rule is active
+(`wpctl status` should list only "Front Camera" and "IR Camera" under Video → Sources).
+
 ## Google Meet / Chrome: blank page
 
 `scripts/grant-chrome-camera.sh`, then fully quit and restart Chrome. Chrome must have
@@ -57,6 +71,8 @@ suggest reloading the sensor module as a workaround — don't.
 - `ps -o args= -C v4l2-relayd` must show `camera-name=\\_SB_.LNK1` (two backslashes) — see the
   backslash note in [how-it-works](how-it-works.md#problem-6--zoom-only-shows-ipu7-v4l2-only-apps).
 - The stock relay binary stalls after a few frames; the patched one is required.
+- If it delivers only a frame or two after another app used the camera, restart it:
+  `sudo systemctl restart v4l2-relayd@xps13-webcam` (seen once; not reproducible yet).
 - Only one app can use the RGB camera at a time: a Meet call, Cheese or Gaze's RGB scan will make
   the Virtual Camera unavailable while they run, and vice versa.
 

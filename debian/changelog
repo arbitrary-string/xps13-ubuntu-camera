@@ -1,3 +1,23 @@
+xps13-ubuntu-camera (0.1.2) stonking; urgency=medium
+
+  * WirePlumber rules: use node.disabled only. device.disabled triggers a
+    WirePlumber 0.5.17 bug (the async create-device hook never advances),
+    after which no libcamera cameras and no audio sinks are created.
+    Replaces the 0.1.1 change, which made that hang reliable.
+  * Hiding the Virtual Camera from PipeWire also fixes GNOME Camera, which
+    picked it as the first non-IR camera and failed to negotiate a format.
+  * postinst warns about user/system WirePlumber files using device.disabled.
+
+ -- arbitrary-string <arbitrarystring@gmail.com>  Sat, 07 Nov 2026 14:00:00 -0500
+
+xps13-ubuntu-camera (0.1.1) stonking; urgency=medium
+
+  * WirePlumber rules: also set node.disabled and match the v4l2loopback
+    device by product name, so the Virtual Camera stays hidden from
+    PipeWire regardless of boot timing.
+
+ -- arbitrary-string <arbitrarystring@gmail.com>  Sat, 07 Nov 2026 13:00:00 -0500
+
 xps13-ubuntu-camera (0.1.0) stonking; urgency=medium
 
   * Initial package: HM1092 DKMS driver, IPU6 crash fix, initramfs and
