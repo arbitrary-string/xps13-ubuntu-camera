@@ -9,7 +9,7 @@ Windows-Hello-style IR camera — working on Ubuntu, for:
 | **XPS 13 9350** | Lunar Lake / **IPU7** (`8086:645d`) | OV02C10 | Himax HM1092 | Lattice "AI USB" (`2ac1:20c9`) / Intel CVS + usbio | ✅ both cameras, Gaze, Chrome/Meet, Zoom |
 
 Tested on **Ubuntu 26.10** with kernel **7.3.0-10-generic**, libcamera 0.7.0, PipeWire/WirePlumber 0.5,
-Gaze 0.4.2. Other kernels and releases may need adjustments — see [docs/troubleshooting.md](docs/troubleshooting.md).
+Gaze 0.5.0 (on the 9340, Gaze was verified with the equivalent patched 0.4.2). Other kernels and releases may need adjustments — see [docs/troubleshooting.md](docs/troubleshooting.md).
 
 > **Status: personal hardware-enablement work, not an official Ubuntu package.** Everything here was
 > developed and verified on one machine of each model. It touches kernel modules, the boot image and
@@ -39,7 +39,7 @@ Adding an HM1092 driver fixes both cameras at once. After that, a handful of use
 | [`dkms/ipu-bridge-noir/`](dkms/ipu-bridge-noir/) | Fallback: RGB webcam **without** the IR driver (ignore the HM1092 entirely) | 9340 (would apply to 9350 too) |
 | [`config/<model>/dracut/`](config/) | Keep camera drivers out of the initramfs (their firmware isn't declared, so they break after updates) | both |
 | [`config/common/wireplumber/`](config/common/wireplumber/), [`config/<model>/wireplumber/`](config/) | Hide raw IPU capture nodes, name the cameras, fix a login timing race | both |
-| [`patches/gaze/`](patches/gaze/) | [Gaze](https://github.com/GunduLabs/gaze) face authentication: use libcamera cameras (RGB + IR) | both |
+| [`patches/gaze/`](patches/gaze/) | [Gaze](https://github.com/GunduLabs/gaze) face authentication setup (RGB + IR). The camera fixes are upstream in Gaze 0.5.0; the old patches are kept for reference | both |
 | [`patches/v4l2-relayd/`](patches/v4l2-relayd/), [`config/xps13-9350/v4l2-relayd/`](config/xps13-9350/v4l2-relayd/) | "Virtual Camera" for V4L2-only apps such as **Zoom** | 9350 (9340 untested) |
 | [`scripts/`](scripts/) | `check-cameras.sh` (read-only health check), Chrome camera permission fix, test helpers | both |
 | [`debian/`](debian/), [`packaging/`](packaging/), [`third_party/`](third_party/) | Debian packaging (`xps13-ubuntu-camera`), model detection, packaged configs, vendored v4l2-relayd source | both |
@@ -72,7 +72,8 @@ One package, `xps13-ubuntu-camera`, sets up everything:
 
 After rebooting: `xps13-camera-check` (read-only health check). For Chrome/Google Meet run
 `xps13-camera-chrome-fix` once as your user and enable `chrome://flags/#enable-webrtc-pipewire-camera`.
-Gaze face unlock is not packaged — see [patches/gaze/README.md](patches/gaze/README.md).
+Gaze face unlock: install Gaze **0.5.0 or newer** from Gundu Labs. It supports these cameras out of the box
+(our fixes were merged upstream). Setup notes: [patches/gaze/README.md](patches/gaze/README.md).
 
 The package takes over a previous manual installation and replaces the old
 `xps13-ubuntu-camera-zoom` package from v0.1.x. Remove it with `sudo apt remove xps13-ubuntu-camera`
@@ -98,7 +99,8 @@ Run [`scripts/check-cameras.sh`](scripts/check-cameras.sh) at any point; it chan
 - HM1092 driver: **Jake Steinman**, posted to linux-media in July 2026 (not yet merged);
   GPL-2.0-only. Our changes are in `dkms/hm1092-dell/patches/`.
 - `ipu6-isys-pmguard` / `ipu-bridge-noir`: patches to Linux kernel files (GPL-2.0).
-- Gaze: **Gundu Labs**, GPL-3.0-or-later; our patches in `patches/gaze/` are under the same licence.
+- Gaze: **Gundu Labs**, GPL-3.0-or-later. Our camera patches were merged upstream ([PR #918](https://github.com/GunduLabs/gaze/pull/918),
+  Gaze 0.5.0); the copies in `patches/gaze/` are under the same licence.
 - v4l2-relayd: **Canonical Ltd.**, GPL-2.0; our patch in `patches/v4l2-relayd/` likewise.
 - Files written for this repo (docs, configs, scripts) are **GPL-2.0-or-later** ([LICENSE](LICENSE) has the GPL-2 text).
   Each directory keeps its upstream licence — see [NOTICE](NOTICE) for the per-directory list.

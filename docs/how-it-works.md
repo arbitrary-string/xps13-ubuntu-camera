@@ -118,15 +118,17 @@ camera only while an app has the virtual one open. Stock v4l2-relayd 0.2.0 did n
 
 Gaze's privileged daemon only trusts real `/dev/video*` nodes (anti-injection design), plus a
 libcamera fallback for the RGB `"primary"` setting that picks the *first* libcamera camera — the IR
-one here. → `patches/gaze/`:
+one here. → **fixed upstream in Gaze 0.5.0** ([PR #918](https://github.com/GunduLabs/gaze/pull/918));
+the original patches are kept in `patches/gaze/`:
 
 1. `libcamera:<name>` camera sources, opened by the daemon's own libcamera (same trust as Gaze's
    fallback);
 2. the GUI's `pipewiresrc target-object=libcamera_input.<id>` choices are mapped back to the
    libcamera camera (reversing WirePlumber's name sanitising) — PipeWire is never read from;
 3. the appsink must not clock-sync for `libcamerasrc` (same timestamp issue as in v4l2-relayd: one
-   black frame, then nothing). This also affects stock Gaze's IPU6/IPU7 fallback.
+   black frame, then nothing). Seen on IPU6 (9340); on IPU7 (9350) a synced sink happens to work.
+   This also affected stock Gaze's `primary` libcamera fallback.
 
-On GNOME, Gaze 0.4.2's PAM module deliberately ignores every `gdm-*` service except `gdm-face`, so the
+On GNOME, Gaze's PAM module deliberately ignores every `gdm-*` service except `gdm-face`, so the
 **lock screen and login screen need the Gaze GNOME extension** — `pam-auth-update` alone only covers
 `sudo` and polkit.

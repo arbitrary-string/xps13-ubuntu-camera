@@ -1,47 +1,39 @@
-# Gaze patches — face authentication with IPU6/IPU7 (libcamera) cameras
+# Gaze face authentication with IPU6/IPU7 (libcamera) cameras
 
 [Gaze](https://github.com/GunduLabs/gaze) (Gundu Labs, GPL-3.0-or-later) is a modern face-authentication
-system for Linux. Its privileged daemon `gazed` only trusts real `/dev/video*` nodes, which on Intel
-IPU laptops are raw capture nodes, so it cannot use these cameras. These patches (same licence) apply
-to the **v0.4.2** tag:
+system for Linux.
 
-| Patch | Change |
-|---|---|
-| `0001` | New camera source `libcamera:<camera name>` for `rgb` and `ir`; the daemon opens it with its own `libcamerasrc` (same trust model as Gaze's built-in `primary` libcamera fallback). |
-| `0002` | The GUI saves choices as `pipewiresrc target-object=libcamera_input.<id>`; the daemon maps that back to the libcamera camera by reversing WirePlumber's name sanitising. No frames are ever read from the user's PipeWire session. |
-| `0003` | Don't clock-sync the appsink for `libcamerasrc` — its timestamps don't follow the pipeline clock and capture stalls after one black frame. **This also affects stock Gaze's IPU6/IPU7 `primary` fallback.** |
+> **Fixed upstream: use Gaze 0.5.0 or newer.** The changes that let Gaze use these cameras were merged
+> into Gaze as [PR #918](https://github.com/GunduLabs/gaze/pull/918) and shipped in
+> [v0.5.0](https://github.com/GunduLabs/gaze/releases/tag/v0.5.0). The Gaze maintainer extended them,
+> adding `gaze doctor` checks and a retry when another program is holding the camera.
+> **No patching or rebuilding is needed any more.** The `000*.patch` files here are kept only for
+> reference: they apply to the old v0.4.2 tag.
 
-`tools/camtest.rs` is a small example program (drop it into `crates/gaze-vision/examples/`) that opens
-a camera exactly like the daemon and prints frame timing/brightness — useful for testing as root.
+What 0.5.0 supports:
+- `libcamera:<camera name>` as an `rgb` or `ir` camera source.
+- The values the Gaze GUI saves for libcamera cameras (`pipewiresrc target-object=libcamera_input.<id>`).
+  The daemon opens these with its own libcamera and never reads frames from your PipeWire session.
+- A fix for the capture stall after the first black frame on IPU6.
 
-## Build and install (only the daemon is replaced)
+## Install
 
-```bash
-# official packages from the Gundu Labs apt repo (see Gaze's README), but opt out of automatic PAM changes first:
-sudo mkdir -p /etc/gaze && sudo touch /etc/gaze/pam.optout
-sudo apt install gaze gaze-gui gaze-gnome-extension
+1. Install the official packages from the Gundu Labs apt repo, version 0.5.0 or newer (see Gaze's
+   README). To set up PAM yourself, opt out of the automatic PAM changes first:
 
-# build the patched daemon from the same version
-sudo apt install build-essential pkg-config clang libclang-dev libopencv-dev libv4l-dev libpam0g-dev \
-  libtss2-dev libssl-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-libcamera \
-  gstreamer1.0-pipewire rustc cargo git libdbus-1-dev
-git clone --branch v0.4.2 https://github.com/GunduLabs/gaze.git && cd gaze
-git am /path/to/this/repo/patches/gaze/*.patch
-cargo build --locked -p gazed --release
+   ```bash
+   sudo mkdir -p /etc/gaze && sudo touch /etc/gaze/pam.optout
+   sudo apt install gaze gaze-gui gaze-gnome-extension
+   ```
 
-# swap it in; dpkg-divert keeps apt from overwriting it
-sudo dpkg-divert --add --rename --divert /usr/bin/gazed.distrib /usr/bin/gazed
-sudo install -m 0755 target/release/gazed /usr/bin/gazed
-sudo systemctl restart gazed
-sudo apt-mark hold gaze gaze-gui gaze-gnome-extension    # rebuild the patches before upgrading
-```
+2. Set the cameras (`config/<model>/gaze-cameras.toml`).
+3. Enroll with the Gaze GUI. Pick "Front Camera" and "IR Camera", **not** "Primary camera": "Primary camera" still selects the IR sensor on these laptops.
+4. Test with `gaze test`, then check everything with `gaze doctor`.
 
-Then set the cameras (`config/<model>/gaze-cameras.toml`), enroll with the Gaze GUI ("Front Camera" /
-"IR Camera" — **not** "Primary camera"), test with `gaze auth --verbose`.
-
-**Login integration:** `sudo pam-auth-update` → *Gaze Face Authentication (Sequential)* covers `sudo`
-and polkit (keep *Fingerprint authentication* ticked if you use it). The **lock screen and GDM** need
-the GNOME extension:
+**Login integration.**
+- `sudo pam-auth-update` → *Gaze Face Authentication (Sequential)* covers `sudo` and polkit. Keep
+*Fingerprint authentication* ticked if you use it.
+- The **lock screen and GDM** need the GNOME extension:
 
 ```bash
 gnome-extensions enable gaze@gundulabs.com
@@ -50,7 +42,31 @@ printf '[org/gnome/shell/extensions/gaze]\nenable-face-authentication=true\n' | 
   sudo tee /etc/dconf/db/gdm.d/99-gaze && sudo dconf update                          # GDM, after reboot
 ```
 
-Template encryption (`encrypt_templates`, default on) requires a TPM. Without full-disk encryption the
-TPM seal does not protect templates from someone booting another OS — leave keyring unlock off.
+Template encryption (`encrypt_templates`, on by default) requires a TPM. Without full-disk encryption,
+the TPM seal does not protect templates from someone who boots another OS, so leave keyring unlock off.
 
-Undo: `sudo dpkg-divert --remove --rename /usr/bin/gazed` then `gaze uninstall`.
+## Upgrading from the patched 0.4.2 daemon
+
+If you followed the earlier version of this guide, and so have a patched `gazed` diverted over the stock
+one with the packages held, switch back to the official packages like this:
+
+```bash
+sudo mv /usr/bin/gazed ~/gazed-patched-0.4.2.bak     # keep the patched binary as a backup
+sudo dpkg-divert --remove --rename /usr/bin/gazed    # puts the packaged gazed back
+sudo apt-mark unhold gaze gaze-gui gaze-gnome-extension
+sudo apt install gaze gaze-gui gaze-gnome-extension  # 0.5.0 or newer
+sudo systemctl restart gazed
+gaze doctor && gaze test
+```
+
+Your existing `/etc/gaze/config.toml`, enrolled faces and PAM setup are kept. The camera values the GUI saved
+work unchanged with 0.5.0.
+
+## Files here
+
+- `000*.patch`: the original changes, against v0.4.2. **Historical: not needed with Gaze 0.5.0+.**
+- `tools/camtest.rs`: a small example program. Drop it into `crates/gaze-vision/examples/` of a Gaze source
+  tree. It opens a camera exactly like the daemon (`Camera::open_privileged` / `open_ir_privileged`) and
+  prints frame timing and brightness, which helps when debugging camera problems.
+
+Undo Gaze entirely: `gaze uninstall`.
